@@ -7,6 +7,7 @@ using Quartz;
 using Quartz.Impl;
 using Telegram.Bot;
 using TelegramSheetBot.Services;
+using TelegramSheetBot.Services.Callbacks;
 using TelegramSheetBot.Services.Qartz;
 
 
@@ -68,6 +69,7 @@ namespace TelegramSheetBot
                 .AddSingleton(new SheetsService(init))
                 .AddSingleton<SettingChat>()
                 .AddTransient<GoogleSheets>()
+                .AddTransient<ManageGroup>()
                 .AddTransient<CommandsHandler>()
                 .AddTransient<JobFactory>()
                 .AddTransient<QuartzService>()

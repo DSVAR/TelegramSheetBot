@@ -5,6 +5,11 @@ namespace TelegramSheetBot.Services;
 
 public class DayCallBackService
 {
+    /// <summary>
+    /// дни недели для callback
+    /// </summary>
+    /// <param name="client"></param>
+    /// <param name="chatId"></param>
       public  async Task DayStartPollInChat(ITelegramBotClient client,long chatId)
     {
         var listOfDayWeek =  new InlineKeyboardMarkup(new []

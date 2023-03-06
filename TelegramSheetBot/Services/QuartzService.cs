@@ -68,7 +68,9 @@ public class QuartzService : IJob
                     }
                     else
                     {
-                        if (TimeSpan.Parse(item.TimeStartPoll!) >= TimeSpan.Parse(item.TimeEndPoll!))
+                        if (TimeSpan.Parse(item.TimeStartPoll!) >= TimeSpan.Parse(item.TimeEndPoll!) && 
+                            TimeSpan.Parse(item.TimeIntervalEnd!)<= TimeSpan.Parse(item.TimeEndPoll!) 
+                            && TimeSpan.Parse(item.TimeStartPoll)>TimeSpan.Parse(item.TimeEndPoll!))
                         {
                             item = RandomTime(item);
                         }
@@ -115,7 +117,6 @@ public class QuartzService : IJob
                 {
                     item.CreatedRequestPoll = true;
 
-                 //   var googleList = await _sheets.GetHeader(item.GoogleSheetToken!);
 
                     var googleListSecond = (await _sheets.ListForPoll(item.GoogleSheetToken!)).Select(x=>x.Name);
 
@@ -138,27 +139,6 @@ public class QuartzService : IJob
 
                         item.TimeEndPoll = now.Hour + ":" + now.Minute;
                     }
-                   
-                    // await _jobWithBd.Update(item);
-                    //
-                    //
-                    //
-                    // var listOfGoogle = googleList.Select((x, i) => new
-                    //         { index = i, value = x })
-                    //     .GroupBy(i => i.index / 2)
-                    //     .Select(x => x.Select(v =>
-                    //         InlineKeyboardButton.WithCallbackData(v.value.Name!, $"!add {v.value.Name!}")).ToList())
-                    //     .ToList();
-                    //
-                    // listOfGoogle.Add(new List<InlineKeyboardButton>()
-                    // {
-                    //     InlineKeyboardButton.WithCallbackData(
-                    //         $"{GlobalValues.SmileStar} создать опрос {GlobalValues.SmileStar}", "!createPoll")
-                    // });
-                    //
-                    // await _client.SendTextMessageAsync(item.ChatId, " выберите объекты для голосования ",
-                    //     replyMarkup: new InlineKeyboardMarkup(listOfGoogle));
-
 
                     await  _jobWithBdStructureChat.Update(item);
                     return;
@@ -177,35 +157,38 @@ public class QuartzService : IJob
                 item.TimeEndPoll = "";
                 item.TimeStartPoll = "";
 
-                //TODO: сдлелать выборкуи из самых больших ответов
-                var options =(await _jobWithBdOptions.GetItemsAsync()).ToList();
-                
-                var max=options.Max(i => i.VoterCount);
-                var listMax = (options.Where(i => i.VoterCount == max)).ToList();
+                var options =(await _jobWithBdOptions.GetItemsAsync()).Where(i=>i.ChatId==item.ChatId).ToList();
 
-                var rnd = new Random();
-                string name="";
-                if (listMax.Count() > 1)
+                if (options.Count > 0)
                 {
-                    var ind = rnd.Next(listMax.Count);
-                    name = listMax[ind].Name!;
-                }
+                    var max=options.Max(i => i.VoterCount);
+                    var listMax = (options.Where(i => i.VoterCount == max) ).ToList();
 
-                if (listMax.Count == 1)
-                {
-                    name = listMax.First().Name!;
-                }
-                await _sheets.BanSystem(item.GoogleSheetToken!, name);
-
-
+                    var rnd = new Random();
+                    string name="";
                 
+                    if (listMax.Count() > 1)
+                    {
+                        var ind = rnd.Next(listMax.Count);
+                        name = listMax[ind].Name!;
+                    }
 
-                await  _jobWithBdStructureChat.Update(item);
+                    if (listMax.Count == 1)
+                    {
+                        name = listMax.First().Name!;
+                    }
+                    await _sheets.BanSystem(item.GoogleSheetToken!, name);
 
-                await _client.StopPollAsync(item.ChatId, item.IdMessageLastPoll);
-                await _client.SendTextMessageAsync(item.ChatId, $"закрытие голосования! Победитель:{name}");
-                var pollOptions = (await _jobWithBdOptions.GetItemsAsync()).Where(poll => poll.ChatId == item.ChatId);
-                await _jobWithBdOptions.DeleteRangeAsync(pollOptions);
+
+                    await  _jobWithBdStructureChat.Update(item);
+
+                    await _client.StopPollAsync(item.ChatId, item.IdMessageLastPoll);
+                    await _client.SendTextMessageAsync(item.ChatId, $"закрытие голосования! Победитель:{name}");
+                  
+                    
+                    await _jobWithBdOptions.DeleteRangeAsync(options);
+                }
+                
             }
         }
         catch (Exception e)
@@ -214,7 +197,11 @@ public class QuartzService : IJob
         }
     }
 
-
+/// <summary>
+/// рандомное время для начала и окончания голосования
+/// </summary>
+/// <param name="chat"></param>
+/// <returns></returns>
     private StructureChat RandomTime(StructureChat chat)
     {
         try
@@ -229,7 +216,7 @@ public class QuartzService : IJob
             int randomMinuteStart = int.Parse(chat.TimeIntervalStart!.Substring(chat.TimeIntervalStart.IndexOf(':')+1));
             int randomMinuteEnd = int.Parse(chat.TimeIntervalEnd!.Substring(chat.TimeIntervalEnd.IndexOf(':')+1));
         
-            if (hourStart - hourEnd > 3)
+            if ( hourEnd  - hourStart > 3)
             {
                 randomHourStart = new Random().Next(hourStart + 1, hourEnd - 1);
                 randomHourEnd= new Random().Next(hourStart + 1, hourEnd - 1);

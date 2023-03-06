@@ -1,5 +1,6 @@
 using Telegram.Bot;
 using TelegramSheetBot.Models;
+using TelegramSheetBot.Services.Callbacks;
 
 namespace TelegramSheetBot.Services;
 
@@ -9,12 +10,15 @@ public class CommandsHandler
     private readonly SettingChat _settingChat;
     private readonly DayCallBackService _dayCallBackService;
     private readonly JobWithBd<StructureChat> _structureChat;
-    public CommandsHandler(GoogleSheets googleSheets,SettingChat settingChat,DayCallBackService dayCallBackService,JobWithBd<StructureChat> structureChat)
+    private readonly ManageGroup _manageGroup;
+    public CommandsHandler(GoogleSheets googleSheets,SettingChat settingChat,
+        DayCallBackService dayCallBackService,JobWithBd<StructureChat> structureChat,ManageGroup manageGroup)
     {
         _googleSheets = googleSheets;
         _settingChat = settingChat;
         _dayCallBackService = dayCallBackService;
         _structureChat = structureChat;
+        _manageGroup = manageGroup;
     }
 
     public async Task TextCommand(string text, ITelegramBotClient client, long chatId)
@@ -61,6 +65,11 @@ public class CommandsHandler
             {
                 break;
             }
+            case "/manageGroup":
+            {
+                await _manageGroup.GetAllGroups(chatId);
+                break;
+            }
       
         }
     }
@@ -72,18 +81,6 @@ public class CommandsHandler
 
         var item = await _structureChat.FindAsync(chatId);
         
-         // if (text.Contains("add"))
-         // {
-         //     var textAdd = text.Replace("!add", "");
-         //     textAdd = textAdd.TrimEnd(' ');
-         //     textAdd = textAdd.TrimStart(' ');
-         //     
-         //     await _settingChat.AddListOfSheet(chatId, textAdd,client);
-         //     
-         //     return;
-         // }
-         ///TODO:удалить комментарии
-
          if (text.Contains("Start"))
          {
              var dayStart = text.Replace("!Start_", "");
@@ -165,6 +162,22 @@ public class CommandsHandler
          }
     }
 
+    public async Task AdminsCallback(string text,long chatId)
+    {
+        switch (text.ToLower())
+        {
+            case "/start":
+            {
+              break;
+            }
+            case "/managegroup":
+            {
+                await _manageGroup.GetAllGroups(chatId);
+                break;
+            }
+        }
+        
+    }
 
    
 

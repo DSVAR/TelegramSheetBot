@@ -7,7 +7,7 @@ namespace TelegramSheetBot.Services;
 
 public class StartBot
 {
-
+//сервисы
     private readonly TelegramBotClient _client;
     private readonly SettingChat _settingChat;
     private readonly CommandsHandler _handler;
@@ -24,7 +24,9 @@ public class StartBot
         _pollService = pollService;
     }
     
-    
+    /// <summary>
+    /// инициализация функции  чтения сообщений и ошибок
+    /// </summary>
     public async Task Init()
     {
         await _client.ReceiveAsync(FuncUpdate, FuncError);
@@ -37,6 +39,8 @@ public class StartBot
 
     private async Task FuncUpdate(ITelegramBotClient client, Update update, CancellationToken token)
     {
+       
+        //логи при добавлении в чат и удалении
         if (update.Type == UpdateType.MyChatMember)
         {
             if (update.MyChatMember!.NewChatMember.Status == ChatMemberStatus.Left)
@@ -59,81 +63,103 @@ public class StartBot
         }
 
 
-
+//управление callbacks
         if (update.Type == UpdateType.CallbackQuery)
         {
             var callback = update.CallbackQuery;
             var id = update.CallbackQuery!.Message!.Chat.Id;
-            
-           
-            var administrators=await client.GetChatAdministratorsAsync(chatId: id, cancellationToken: token);
-            Console.WriteLine($"Кто нажал кнопку{callback!.From}, {callback.Data}");
-          
-            if (callback.From.Id == 421814730 || ThereAdmin(administrators,id))
+            if (callback!.Message!.Chat.Type != ChatType.Private)
             {
-                await CallbackMessage(callback, client, id);
+                var administrators=await client.GetChatAdministratorsAsync(chatId: id, cancellationToken: token);
+            
+                Console.WriteLine($"Кто нажал кнопку{callback!.From}, {callback.Data}");
+          
+                if (callback.From.Id == 421814730 || ThereAdmin(administrators,id))
+                {
+                    await CallbackMessage(callback, client, id);
+                }
+            }
+            else
+            {
+                await _client.AnswerCallbackQueryAsync(callback.Id, cancellationToken: token);
             }
             
+            
 
-            return;
+            // return;
         }
 
 
+        //изменения опроса
         if (update.Type == UpdateType.Poll)
         {
-          
+            if(!update.Poll!.IsClosed)
             await _pollService.AddPoll(update.Poll!);
-            return;
+            // return;
         }
 
         if (update.Type == UpdateType.PollAnswer)
         {
             //какой человек проголосовал
-            return;
+            // return;
         }
 
 
         if(update.Type==UpdateType.Message)
         {
             var message = update.Message;
-
-            Console.WriteLine($"От кого:{message!.From} {message.Text}");
-            if (message.Type == MessageType.ChatMemberLeft)
+            
+            var chat = await client.GetChatAsync(message!.Chat.Id);
+            //если отправляется из группы то мы фиксируем сообщение
+            if (chat.Type == ChatType.Group || chat.Type == ChatType.Supergroup)
             {
-                return;
-            }
-
-            if (message.Type == MessageType.ChatMembersAdded)
-            {
-                if (!await _settingChat.Exist(message.Chat.Id))
-                { //добавление чат
-                    await _dayCallBackService.DayStartPollInChat(client, update.MyChatMember!.Chat.Id);
+                Console.WriteLine($"От кого:{message!.From} {message.Text}");
+                if (message.Type == MessageType.ChatMemberLeft)
+                {
+                    return;
                 }
+
+                if (message.Type == MessageType.ChatMembersAdded)
+                {
+                    if (!await _settingChat.Exist(message.Chat.Id))
+                    { //добавление чат
+                        await _dayCallBackService.DayStartPollInChat(client, update.MyChatMember!.Chat.Id);
+                    }
                
-                return;
-            }
+                    // return;
+                }
         
             
 
-            if (string.IsNullOrEmpty(message.Text!))
-                return;
+                if (string.IsNullOrEmpty(message.Text!))
+                    return;
 
             
-            var administrators=await client.GetChatAdministratorsAsync(chatId: message.Chat.Id, cancellationToken: token);
+                var administrators=await client.GetChatAdministratorsAsync(chatId: message.Chat.Id, cancellationToken: token);
 
             
-            if (message.From!.Id == 421814730 || ThereAdmin(administrators,message.From.Id))
+                if (message.From!.Id == 421814730 || ThereAdmin(administrators,message.From.Id))
+                {
+                    if (message.Text!.ToCharArray()[0] == '/')
+                    {
+                        await _handler.TextCommand(message.Text!, client, message.Chat.Id);
+                    }
+
+                    if (message.Text!.ToCharArray()[0].ToString() == "!")
+                    {
+                        await _handler.ExMarkCommand(message.Text!, client, message.Chat.Id);
+                    }
+                }
+            }
+
+            if (chat.Type == ChatType.Private && message.From!.Id==421814730)
             {
                 if (message.Text!.ToCharArray()[0] == '/')
                 {
-                    await _handler.TextCommand(message.Text!, client, message.Chat.Id);
-                }
-
-                if (message.Text!.ToCharArray()[0].ToString() == "!")
-                {
-                    await _handler.ExMarkCommand(message.Text!, client, message.Chat.Id);
+                    await _handler.AdminsCallback(message.Text!,  message.Chat.Id);
                 }
             }
+            
         }
     }
 
