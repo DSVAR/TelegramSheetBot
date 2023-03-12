@@ -65,13 +65,10 @@ public class CommandsHandler
             {
                 break;
             }
-            case "/manageGroup":
-            {
-                await _manageGroup.GetAllGroups(chatId);
-                break;
-            }
-      
+          
         }
+
+       
     }
 
   
@@ -173,6 +170,23 @@ public class CommandsHandler
             case "/managegroup":
             {
                 await _manageGroup.GetAllGroups(chatId);
+                break;
+            }
+        }
+
+        switch (text)
+        {
+            case { } a when a.Contains("/chat_"):
+            {
+                var replacedText = a.Replace("/chat_", "");
+                var idTg = long.Parse( replacedText.Substring(0, replacedText.IndexOf('/')) );
+                var id =long.Parse( replacedText.Remove(0, replacedText.IndexOf('/')+1) );
+                
+                await _manageGroup.SettingChat(idTg,id);
+                break;
+            }
+            case { } a when a.Contains(""):
+            {
                 break;
             }
         }

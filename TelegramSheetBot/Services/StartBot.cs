@@ -2,6 +2,7 @@ using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using TelegramSheetBot.Services.Callbacks;
 
 namespace TelegramSheetBot.Services;
 
@@ -13,15 +14,17 @@ public class StartBot
     private readonly CommandsHandler _handler;
     private readonly DayCallBackService _dayCallBackService;
     private readonly PollService _pollService;
+    private readonly ManageGroup _manageGroup;
 
     public StartBot(TelegramBotClient client, SettingChat settingChat, CommandsHandler handler,DayCallBackService dayCallBackService,
-        PollService pollService)
+        PollService pollService, ManageGroup manageGroup)
     {
         _client = client;
         _settingChat = settingChat;
         _handler = handler;
         _dayCallBackService = dayCallBackService;
         _pollService = pollService;
+        _manageGroup = manageGroup;
     }
     
     /// <summary>
@@ -63,17 +66,20 @@ public class StartBot
         }
 
 
-//управление callbacks
+        //управление callbacks
         if (update.Type == UpdateType.CallbackQuery)
         {
             var callback = update.CallbackQuery;
             var id = update.CallbackQuery!.Message!.Chat.Id;
+         
+            //await _client.AnswerCallbackQueryAsync(callback!.Id, cancellationToken: token);
+            
             if (callback!.Message!.Chat.Type != ChatType.Private)
             {
                 var administrators=await client.GetChatAdministratorsAsync(chatId: id, cancellationToken: token);
             
                 Console.WriteLine($"Кто нажал кнопку{callback!.From}, {callback.Data}");
-          
+
                 if (callback.From.Id == 421814730 || ThereAdmin(administrators,id))
                 {
                     await CallbackMessage(callback, client, id);
@@ -81,7 +87,10 @@ public class StartBot
             }
             else
             {
-                await _client.AnswerCallbackQueryAsync(callback.Id, cancellationToken: token);
+                if (callback.Data![0].ToString() == "/" && callback.From!.Id==421814730)
+                {
+                    await _handler.AdminsCallback(callback.Data!, id);
+                }
             }
             
             
@@ -94,13 +103,7 @@ public class StartBot
         if (update.Type == UpdateType.Poll)
         {
             if(!update.Poll!.IsClosed)
-            await _pollService.AddPoll(update.Poll!);
-            // return;
-        }
-
-        if (update.Type == UpdateType.PollAnswer)
-        {
-            //какой человек проголосовал
+                 await _pollService.AddPoll(update.Poll!);
             // return;
         }
 

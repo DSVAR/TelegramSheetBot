@@ -7,6 +7,7 @@ public class StructureChat
 {
     [Key]
      public long ChatId { get; set; }
+     public string? NameChat { get; set; }
     public bool CreatedPoll { get; set; }
     public bool CreatedRequestPoll { get; set; }
     public bool CreatedPollThisWeek { get; set; }
@@ -22,6 +23,7 @@ public class StructureChat
     
     public string? DayOfWeekStartPoll { get; set; }
     public string? DayOfWeekEndPoll { get; set; }
+    public bool CanStartPoll { get; set; }
     public List<string>? ListSheet { get; set; }
 
     public int IdMessageLastPoll { get; set; }

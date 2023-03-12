@@ -11,13 +11,15 @@ namespace TelegramSheetBot.Services;
 /// </summary>
 public class SettingChat
 {
-    private readonly JobWithBd<StructureChat> _jobWithBd;
+    private readonly JobWithBd<StructureChat> _jobWithBdChat;
     private readonly DayCallBackService _dayCallBackService;
+    private readonly TelegramBotClient _client;
 
-    public SettingChat(JobWithBd<StructureChat> jobWithBd, DayCallBackService dayCallBackService)
+    public SettingChat(JobWithBd<StructureChat> jobWithBdChat, DayCallBackService dayCallBackService,TelegramBotClient client)
     {
-        _jobWithBd = jobWithBd;
+        _jobWithBdChat = jobWithBdChat;
         _dayCallBackService = dayCallBackService;
+        _client = client;
     }
 
     /// <summary>
@@ -28,11 +30,14 @@ public class SettingChat
     {
         try
         {
-            if ((await _jobWithBd.FindAsync(chatId)) == null)
+            if ((await _jobWithBdChat.FindAsync(chatId)) == null)
             {
-                await _jobWithBd.CreateAsync(new()
+                var chat = await _client.GetChatAsync(chatId);
+                await _jobWithBdChat.CreateAsync(new()
                 {
-                    ChatId = chatId
+                    ChatId = chatId,
+                    NameChat = chat.Title,
+                    CanStartPoll =true
                 });
             }
         }
@@ -43,37 +48,7 @@ public class SettingChat
        
     }
 
-    // /// <summary>
-    // /// добавление строки в лист
-    // /// </summary>
-    // /// <param name="chatId"></param>
-    // /// <param name="name"></param>
-    // /// <param name="client"></param>
-    // public async Task AddListOfSheet(long chatId, string name, ITelegramBotClient client)
-    // {
-    //     var chat = await _jobWithBd.FindAsync(chatId);
-    //
-    //     if ((chat) != null)
-    //     {
-    //         if (chat.ListSheet == null)
-    //         {
-    //             var list = new List<string>();
-    //             list.Add(name);
-    //             chat.ListSheet = list;
-    //             await _jobWithBd.Update(chat);
-    //         }
-    //         else
-    //         {
-    //             if (chat.ListSheet!.Count < 10)
-    //             {
-    //                 chat.ListSheet!.Add(name);
-    //                 await  _jobWithBd.Update(chat);
-    //             }
-    //             else await client.SendTextMessageAsync(chatId, "больше 10 объектов добавить нельзя ", disableNotification: true);
-    //         }
-    //         
-    //     }
-    // }
+  
 
     /// <summary>
     /// обновление дня начала и конца голосования
@@ -83,20 +58,20 @@ public class SettingChat
     /// <param name="dayOfWeekEnd"></param>
     public async Task UpdateDayInChat(long chatId, string? dayOfWeekStart = null, string? dayOfWeekEnd = null)
     {
-        var chat = await _jobWithBd.FindAsync(chatId);
+        var chat = await _jobWithBdChat.FindAsync(chatId);
 
         if ((chat) != null)
         {
             if (!string.IsNullOrEmpty(dayOfWeekStart))
             {
                 chat.DayOfWeekStartPoll = dayOfWeekStart;
-                await _jobWithBd.Update(chat);
+                await _jobWithBdChat.Update(chat);
             }
 
             if (!string.IsNullOrEmpty(dayOfWeekEnd))
             {
                 chat.DayOfWeekEndPoll = dayOfWeekEnd;
-                await  _jobWithBd.Update(chat);
+                await  _jobWithBdChat.Update(chat);
             }
         }
     }
@@ -108,12 +83,12 @@ public class SettingChat
     /// <param name="token"></param>
     public async Task UpdateToken(long chatId, string token)
     {
-        var chat = await _jobWithBd.FindAsync(chatId);
+        var chat = await _jobWithBdChat.FindAsync(chatId);
 
         if ((chat) != null)
         {
             chat.GoogleSheetToken = token;
-            await _jobWithBd.Update(chat);
+            await _jobWithBdChat.Update(chat);
         }
     }
 
@@ -132,7 +107,7 @@ public class SettingChat
 
             if (reg.IsMatch(timeInterval))
             {
-                var chat = await _jobWithBd.FindAsync(chatId);
+                var chat = await _jobWithBdChat.FindAsync(chatId);
 
 
                 var startInterval = timeInterval.Remove(timeInterval.IndexOf('-'));
@@ -155,7 +130,7 @@ public class SettingChat
                         chat.TimeStartPoll = "";
                         chat.TimeEndPoll = "";
 
-                        await _jobWithBd.Update(chat);
+                        await _jobWithBdChat.Update(chat);
                         return true;
                     }
                 }
@@ -175,7 +150,7 @@ public class SettingChat
     {
         try
         {
-            var chat = await _jobWithBd.FindAsync(id);
+            var chat = await _jobWithBdChat.FindAsync(id);
             
             if ((chat.ListSheet) != null)
             {
@@ -189,7 +164,7 @@ public class SettingChat
                     chat.ListSheet.Clear();
                     chat.PollId= message.Poll!.Id;
                     
-                    await _jobWithBd.Update(chat);
+                    await _jobWithBdChat.Update(chat);
                
                
                 }
@@ -207,7 +182,7 @@ public class SettingChat
     {
         try
         {
-            var chat =await _jobWithBd.FindAsync(id);
+            var chat =await _jobWithBdChat.FindAsync(id);
             if ((chat) == null)
             {
                 return false;
@@ -226,7 +201,7 @@ public class SettingChat
 
     public async Task Settings(ITelegramBotClient client,long chatId)
     {
-        var item = await _jobWithBd.FindAsync(chatId);
+        var item = await _jobWithBdChat.FindAsync(chatId);
         if (!item!.FirstSetSettings)
         {
             var listOfDayWeek =  new InlineKeyboardMarkup(new []
@@ -254,31 +229,18 @@ public class SettingChat
             await  _dayCallBackService.DayStartPollInChat(client, chatId);
         }
     }
-    // public async Task UpdatePoll(PollOption[] pollOption,string pollId)
-    // {
-    //     var chat = await _jobWithBd.FindAsyncString(pollId);
-    //     var n = new StructureChat();
-    //     n.Options = new List<MyPollOptions>();
-    //
-    //     if ((chat) != null)
-    //     {
-    //         foreach (var option in pollOption)
-    //         {
-    //             n.Options!.Add(new MyPollOptions()
-    //             {
-    //                 Name = option.Text,
-    //                 VoterCount = option.VoterCount
-    //             });
-    //             chat.Options!.Add(new MyPollOptions()
-    //             {
-    //                 Name = option.Text,
-    //                 VoterCount = option.VoterCount
-    //             });
-    //         }
-    //     }
-    //     
-    //
-    //    
-    //
-    // }
+
+
+    public async Task CheckUpdate(long chatId)
+    {
+        var chat = await _jobWithBdChat.FindAsync(chatId);
+        //
+        if (string.IsNullOrEmpty( chat.NameChat))
+        {
+            var fullChat = await _client.GetChatAsync(chatId);
+            chat.NameChat = fullChat.Title;
+            await _jobWithBdChat.Update(chat);
+            var v = 5;
+        }
+    }
 }

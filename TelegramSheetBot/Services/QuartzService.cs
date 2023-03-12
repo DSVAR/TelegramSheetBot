@@ -10,13 +10,17 @@ public class QuartzService : IJob
     private readonly GoogleSheets _sheets;
     private readonly JobWithBd<StructureChat> _jobWithBdStructureChat;
     private readonly JobWithBd<PollOptions> _jobWithBdOptions;
+    private readonly SettingChat _settingChat;
 
-    public QuartzService(TelegramBotClient client, GoogleSheets sheets, JobWithBd<StructureChat> jobWithBdStructureChat,JobWithBd<PollOptions> jobWithBdOptions)
+    public QuartzService(TelegramBotClient client, GoogleSheets sheets, 
+        JobWithBd<StructureChat> jobWithBdStructureChat,JobWithBd<PollOptions> jobWithBdOptions
+        ,SettingChat settingChat)
     {
         _client = client;
         _sheets = sheets;
         _jobWithBdStructureChat = jobWithBdStructureChat;
         _jobWithBdOptions = jobWithBdOptions;
+        _settingChat = settingChat;
     }
 
     public async Task Execute(IJobExecutionContext context)
@@ -34,8 +38,10 @@ public class QuartzService : IJob
             {
                 if (!item.FirstSetSettings)
                 {
+                    await _settingChat.CheckUpdate(item.ChatId);
                     await CheckChat(item);
                     await CheckStartPoll(item);
+                    
                 }
             }
         }
