@@ -159,6 +159,11 @@ public class CommandsHandler
          }
     }
 
+    /// <summary>
+    /// callbacks for admins
+    /// </summary>
+    /// <param name="text"></param>
+    /// <param name="chatId"></param>
     public async Task AdminsCallback(string text,long chatId)
     {
         switch (text.ToLower())
@@ -178,15 +183,31 @@ public class CommandsHandler
         {
             case { } a when a.Contains("/chat_"):
             {
-                var replacedText = a.Replace("/chat_", "");
-                var idTg = long.Parse( replacedText.Substring(0, replacedText.IndexOf('/')) );
-                var id =long.Parse( replacedText.Remove(0, replacedText.IndexOf('/')+1) );
+                var idChatTg = long.Parse( a.Replace("/chat_", ""));
                 
-                await _manageGroup.SettingChat(idTg,id);
+                
+                await _manageGroup.SettingChat(idChatTg,chatId);
                 break;
             }
-            case { } a when a.Contains(""):
+            case { } a when a.Contains("/Back"):
             {
+                await _manageGroup.FunctionBack(chatId);
+                break;
+            }
+            case { } a when a.Contains("/DaysEndPoll"):
+            {
+                await _manageGroup.DaysForEndPoll(chatId);
+                break;
+            }
+            case { } a when a.Contains("/ForceStartPoll_"):
+            {
+                var day = a.Replace("/ForceStartPoll_", "");
+                await _manageGroup.ForceStartPoll(chatId,day);
+                break;
+            }
+            case { } a when a.Contains("/SendButton"):
+            {
+                await _manageGroup.SendButton(chatId);
                 break;
             }
         }
