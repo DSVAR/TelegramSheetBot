@@ -1,4 +1,5 @@
 using Telegram.Bot;
+using TelegramSheetBot.Interfaces;
 using TelegramSheetBot.Models;
 using TelegramSheetBot.Services.Callbacks;
 
@@ -9,10 +10,10 @@ public class CommandsHandler
     private readonly GoogleSheets _googleSheets;
     private readonly SettingChat _settingChat;
     private readonly DayCallBackService _dayCallBackService;
-    private readonly JobWithBd<StructureChat> _structureChat;
+    private readonly IJobWithBd<StructureChat> _structureChat;
     private readonly ManageGroup _manageGroup;
     public CommandsHandler(GoogleSheets googleSheets,SettingChat settingChat,
-        DayCallBackService dayCallBackService,JobWithBd<StructureChat> structureChat,ManageGroup manageGroup)
+        DayCallBackService dayCallBackService,IJobWithBd<StructureChat> structureChat,ManageGroup manageGroup)
     {
         _googleSheets = googleSheets;
         _settingChat = settingChat;
@@ -149,14 +150,8 @@ public class CommandsHandler
                await client.SendTextMessageAsync(chatId, "настройка окончена",disableNotification:true);
            }
 
-          
-           return;
          }
 
-         if (text.Contains("createPoll"))
-         {
-             await _settingChat.CreatePoll(client, chatId);
-         }
     }
 
     /// <summary>
@@ -202,12 +197,18 @@ public class CommandsHandler
             case { } a when a.Contains("/ForceStartPoll_"):
             {
                 var day = a.Replace("/ForceStartPoll_", "");
-                await _manageGroup.ForceStartPoll(chatId,day);
+                await _manageGroup.ForceStartPoll(chatId, day);
+                
                 break;
             }
             case { } a when a.Contains("/SendButton"):
             {
                 await _manageGroup.SendButton(chatId);
+                break;
+            }
+            case { } a when a.Contains("/Test"):
+            {
+                throw new Exception("gay");
                 break;
             }
         }

@@ -1,21 +1,28 @@
 using Telegram.Bot;
 using Telegram.Bot.Types.ReplyMarkups;
+using TelegramSheetBot.Interfaces;
 using TelegramSheetBot.Models;
+using TelegramSheetBot.Services.JobWithBd;
 
 namespace TelegramSheetBot.Services.Callbacks;
 
 public class ManageGroup
 {
-    private readonly JobWithBd<StructureChat> _jobWithBdChat;
-    private readonly JobWithBd<ManageChat> _jobWithBdManageChat;
+    private readonly IJobWithBd<StructureChat> _jobWithBdChat;
+    private readonly IJobWithBd<ManageChat> _jobWithBdManageChat;
     private readonly TelegramBotClient _client;
+    private readonly PollService _pollService;
+    private readonly FindingService _findingService;
 
-    public ManageGroup(JobWithBd<StructureChat> jobWithBdChat, TelegramBotClient client,
-        JobWithBd<ManageChat> jobWithBdManageChat)
+    public ManageGroup(IJobWithBd<StructureChat> jobWithBdChat, TelegramBotClient client,
+        IJobWithBd<ManageChat> jobWithBdManageChat, PollService pollService,
+        FindingService findingService)
     {
         _jobWithBdChat = jobWithBdChat;
         _jobWithBdManageChat = jobWithBdManageChat;
         _client = client;
+        _pollService = pollService;
+        _findingService = findingService;
     }
 
     /// <summary>
@@ -25,12 +32,14 @@ public class ManageGroup
     public async Task GetAllGroups(long chatId)
     {
 
+        var task = _findingService.MChatFindByIdAsync(chatId);
         var inlineMarkup =await GetChatsInlineMarkup();
 
         var message = await _client.SendTextMessageAsync(chatId, "Чаты", replyMarkup: inlineMarkup);
 
 
-        var foundManageChat = (await _jobWithBdManageChat.GetItemsAsync()).FirstOrDefault(m => m.ChatId == chatId);
+        var foundManageChat = await task;
+       // var foundManageChat = (await _jobWithBdManageChat.GetItemsAsync()).FirstOrDefault(m => m.ChatId == chatId);
 
 
         if (foundManageChat is null)
@@ -46,17 +55,19 @@ public class ManageGroup
     }
 
     /// <summary>
-    /// tgchatid- id для отправки
+    /// tgchatid - id для отправки
     /// </summary>
     /// <param name="tgChatId"></param>
     /// <param name="chatManageId"></param>
     public async Task SettingChat(long tgChatId,long chatManageId)
     {
         
-        var chatManage = (await _jobWithBdManageChat.GetItemsAsync()).First(cm => cm.ChatId == chatManageId);
-        var chat = (await _jobWithBdChat.GetItemsAsync()).FirstOrDefault(c=>c.ChatId==chatManage.SelectedChat);
+        var chatManage =await _findingService.MChatFindByIdAsync(chatManageId);
+      //  var chatManage = (await _jobWithBdManageChat.GetItemsAsync()).First(cm => cm.ChatId == chatManageId);
+        var chat = await _findingService.SChatFindByChatIdAsync(chatManage!.SelectedChat);
+        // var chat =  (await _jobWithBdChat.GetItemsAsync()).FirstOrDefault(c=>c.ChatId==chatManage!.SelectedChat);
 
-        chatManage.SelectedChat = tgChatId;
+        chatManage!.SelectedChat = tgChatId;
         await _jobWithBdManageChat.Update(chatManage);
         
         var isPollStart=chat!.CanStartPoll? "Выключить опросы" : "Включить опросы";
@@ -78,6 +89,13 @@ public class ManageGroup
             },
             new []
             {
+                InlineKeyboardButton.WithCallbackData("test",$"/Test"),
+                InlineKeyboardButton.WithCallbackData("test",$"/Test1")
+                // InlineKeyboardButton.WithCallbackData("",$"")
+            },
+            new []
+            {
+             
                  InlineKeyboardButton.WithCallbackData("Назад",$"/Back")
             }
         });
@@ -89,9 +107,10 @@ public class ManageGroup
     public async Task FunctionBack(long chatId)
     {
         var inlineMarkup = await GetChatsInlineMarkup();
-        var chatManage=(await _jobWithBdManageChat.GetItemsAsync()).First(cm => cm.ChatId == chatId);
+        var chatManage=await _findingService.MChatFindByIdAsync(chatId);
+        // var chatManage=(await _jobWithBdManageChat.GetItemsAsync()).First(cm => cm.ChatId == chatId);
         
-        await  _client.EditMessageTextAsync(chatId,chatManage.LastMessage,"Чаты",replyMarkup:inlineMarkup);
+        await  _client.EditMessageTextAsync(chatId,chatManage!.LastMessage,"Чаты",replyMarkup:inlineMarkup);
     }
 
     public async Task DaysForEndPoll(long chatId)
@@ -138,12 +157,19 @@ public class ManageGroup
 
     public async Task ForceStartPoll(long chatId,string week)
     {
+        var manageChat =await _findingService.MChatFindByIdAsync(chatId);
+        // var manageChat = (await _jobWithBdManageChat.GetItemsAsync()).FirstOrDefault(ch => ch.ChatId == chatId);
+        
+        var chat = await _jobWithBdChat.FindAsync(manageChat!.SelectedChat);
+        
         var dayToday = DateTime.Now.DayOfWeek;
         var das = Enum.Parse<DayOfWeek>($"{week}");
-        var te = das - dayToday;
-        var nextDay = DateTime.Now.AddDays(te);
-        
-        var sw = 5;
+        var countDay = das - dayToday;
+        if (countDay >= 0)
+        {
+           var nextDay = DateTime.Now.AddDays(countDay).AddMinutes(2);
+           await _pollService.StartPoll(chat.ChatId, nextDay);
+        }
 
     }
 

@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using TelegramSheetBot.Models;
+using TelegramSheetBot.Interfaces;
 
-namespace TelegramSheetBot.Services;
+namespace TelegramSheetBot.Services.JobWithBd;
 
-public class JobWithBd<T> where T:class
+public class JobWithBd<T> :IJobWithBd<T> where T : class
 {
     private ApplicationContext Application { get; set; }
     private readonly DbSet<T> _dbSet;
@@ -30,7 +30,7 @@ public class JobWithBd<T> where T:class
     public async Task<T> FindAsync(long id)
     {
         return (await  _dbSet.FindAsync(id))!;
-    }
+    }           
     public async Task<T> FindAsync(string id)
     {
         return (await _dbSet.FindAsync(id))!;

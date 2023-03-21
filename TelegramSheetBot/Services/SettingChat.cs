@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
+using TelegramSheetBot.Interfaces;
 using TelegramSheetBot.Models;
 
 namespace TelegramSheetBot.Services;
@@ -11,11 +12,11 @@ namespace TelegramSheetBot.Services;
 /// </summary>
 public class SettingChat
 {
-    private readonly JobWithBd<StructureChat> _jobWithBdChat;
+    private readonly IJobWithBd<StructureChat> _jobWithBdChat;
     private readonly DayCallBackService _dayCallBackService;
     private readonly TelegramBotClient _client;
 
-    public SettingChat(JobWithBd<StructureChat> jobWithBdChat, DayCallBackService dayCallBackService,TelegramBotClient client)
+    public SettingChat(IJobWithBd<StructureChat> jobWithBdChat, DayCallBackService dayCallBackService,TelegramBotClient client)
     {
         _jobWithBdChat = jobWithBdChat;
         _dayCallBackService = dayCallBackService;
@@ -145,38 +146,6 @@ public class SettingChat
         return false;
     }
 
-
-    public async Task CreatePoll(ITelegramBotClient client,long id)
-    {
-        try
-        {
-            var chat = await _jobWithBdChat.FindAsync(id);
-            
-            if ((chat.ListSheet) != null)
-            {
-                if (chat.ListSheet!.Count >= 5)
-                {
-                    var message=await client.SendPollAsync(chat.ChatId, "голосование", chat.ListSheet!, 
-                        allowsMultipleAnswers:true,isAnonymous:false);
-                
-                    chat!.CreatedPoll = true;
-                    chat.IdMessageLastPoll = message.MessageId;
-                    chat.ListSheet.Clear();
-                    chat.PollId= message.Poll!.Id;
-                    
-                    await _jobWithBdChat.Update(chat);
-               
-               
-                }
-                else await client.SendTextMessageAsync(id, "объектов должно быть больше 5", disableNotification: true);
-            }
-            
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
-        }
-    }
 
     public async Task<bool> Exist(long id)
     {

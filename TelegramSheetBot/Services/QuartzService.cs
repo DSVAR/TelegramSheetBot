@@ -1,5 +1,6 @@
 using Quartz;
 using Telegram.Bot;
+using TelegramSheetBot.Interfaces;
 using TelegramSheetBot.Models;
 
 namespace TelegramSheetBot.Services;
@@ -8,19 +9,19 @@ public class QuartzService : IJob
 {
     private readonly TelegramBotClient _client;
     private readonly GoogleSheets _sheets;
-    private readonly JobWithBd<StructureChat> _jobWithBdStructureChat;
-    private readonly JobWithBd<PollOptions> _jobWithBdOptions;
+    private readonly IJobWithBd<StructureChat> _jobWithBdStructureChat;
     private readonly SettingChat _settingChat;
+    private readonly PollService _pollService;
 
     public QuartzService(TelegramBotClient client, GoogleSheets sheets, 
-        JobWithBd<StructureChat> jobWithBdStructureChat,JobWithBd<PollOptions> jobWithBdOptions
-        ,SettingChat settingChat)
+        IJobWithBd<StructureChat> jobWithBdStructureChat,
+        SettingChat settingChat,PollService pollService)
     {
         _client = client;
         _sheets = sheets;
         _jobWithBdStructureChat = jobWithBdStructureChat;
-        _jobWithBdOptions = jobWithBdOptions;
         _settingChat = settingChat;
+        _pollService = pollService;
     }
 
     public async Task Execute(IJobExecutionContext context)
@@ -124,9 +125,9 @@ public class QuartzService : IJob
                     item.CreatedRequestPoll = true;
 
 
-                    var googleListSecond = (await _sheets.ListForPoll(item.GoogleSheetToken!)).Select(x=>x.Name);
+                    var googleList = (await _sheets.ListForPoll(item.GoogleSheetToken!)).Select(x=>x.Name);
 
-                    var message = await _client.SendPollAsync(item.ChatId, "голосование", googleListSecond!,
+                    var message = await _client.SendPollAsync(item.ChatId, "голосование", googleList!,
                         allowsMultipleAnswers: true, isAnonymous: false);
 
                     item.CreatedPoll = true;
@@ -146,56 +147,21 @@ public class QuartzService : IJob
                         item.TimeEndPoll = now.Hour + ":" + now.Minute;
                     }
 
+                    item.StartedPollForced = false;
                     await  _jobWithBdStructureChat.Update(item);
                     return;
                 }
             }
             
-            if (today.DayOfWeek.ToString() == item.DayOfWeekEndPoll && DateTime.Now > timeEnd &&
-                item is { CreatedRequestPoll: true, CreatedPoll: true })
+          
+            //закрытие голосование стандарный/вызванный насильно
+            if ((today.DayOfWeek.ToString() == item.DayOfWeekEndPoll && DateTime.Now > timeEnd &&
+                item is { CreatedRequestPoll: true, CreatedPoll: true,StartedPollForced:false })
+                ||  (item.StartedPollForced && DateTime.Now> item.TimeEndForcePoll &&  item.TimeEndForcePoll != new DateTime() ) )
             {
-                //закрытие голосование
-                item.CreatedRequestPoll = false;
-                item.CreatedPoll = false;
-                
-                item.CreatedPollThisWeek = true;
-
-                item.TimeEndPoll = "";
-                item.TimeStartPoll = "";
-
-                var options =(await _jobWithBdOptions.GetItemsAsync()).Where(i=>i.ChatId==item.ChatId).ToList();
-
-                if (options.Count > 0)
-                {
-                    var max=options.Max(i => i.VoterCount);
-                    var listMax = (options.Where(i => i.VoterCount == max) ).ToList();
-
-                    var rnd = new Random();
-                    string name="";
-                
-                    if (listMax.Count() > 1)
-                    {
-                        var ind = rnd.Next(listMax.Count);
-                        name = listMax[ind].Name!;
-                    }
-
-                    if (listMax.Count == 1)
-                    {
-                        name = listMax.First().Name!;
-                    }
-                    await _sheets.BanSystem(item.GoogleSheetToken!, name);
-
-
-                    await  _jobWithBdStructureChat.Update(item);
-
-                    await _client.StopPollAsync(item.ChatId, item.IdMessageLastPoll);
-                    await _client.SendTextMessageAsync(item.ChatId, $"закрытие голосования! Победитель:{name}");
-                  
-                    
-                    await _jobWithBdOptions.DeleteRangeAsync(options);
-                }
-                
+                await _pollService.EndPoll(item.ChatId);
             }
+           
         }
         catch (Exception e)
         {

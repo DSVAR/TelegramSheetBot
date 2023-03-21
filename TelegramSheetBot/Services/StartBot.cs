@@ -26,14 +26,25 @@ public class StartBot
         _pollService = pollService;
         _manageGroup = manageGroup;
     }
-    
+
     /// <summary>
     /// инициализация функции  чтения сообщений и ошибок
     /// </summary>
     public async Task Init()
     {
-        await _client.ReceiveAsync(FuncUpdate, FuncError);
-        Console.WriteLine( await _client.TestApiAsync() );
+        try
+        {
+            await _client.ReceiveAsync(FuncUpdate, FuncError);
+           
+            Console.WriteLine( await _client.TestApiAsync() );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine( ex.Message );
+            return;
+        }
+
+        
     }
 
 
@@ -87,7 +98,7 @@ public class StartBot
             }
             else
             {
-                if (callback.Data![0].ToString() == "/" && callback.From!.Id==421814730)
+                if (callback.Data![0].ToString() == "/" && callback.From!.Id==421814730 || callback.From.Id== 5898221054)
                 {
                     await _handler.AdminsCallback(callback.Data!, id);
                 }
@@ -155,7 +166,7 @@ public class StartBot
                 }
             }
 
-            if (chat.Type == ChatType.Private && message.From!.Id==421814730)
+            if (chat.Type == ChatType.Private && message.From!.Id==421814730 || message.From!.Id==5898221054)
             {
                 if (message.Text!.ToCharArray()[0] == '/')
                 {
