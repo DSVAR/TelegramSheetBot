@@ -1,15 +1,14 @@
 using Quartz;
 using Quartz.Impl;
-using TelegramSheetBot.Services.Qartz;
 
-namespace TelegramSheetBot.Services;
+namespace TelegramSheetBot.Services.Qartz;
 
-public class TestService
+public class SettingQuartzService
 {
     private ISchedulerFactory _factory;
     private JobFactory _jobFactory;
     
-    public TestService(ISchedulerFactory factory,JobFactory jobFactory)
+    public SettingQuartzService(ISchedulerFactory factory,JobFactory jobFactory)
     {
         _factory = factory;
         _jobFactory = jobFactory;

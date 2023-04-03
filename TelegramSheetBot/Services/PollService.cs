@@ -8,16 +8,15 @@ namespace TelegramSheetBot.Services;
 
 public class PollService
 {
-
     private readonly IJobWithBd<StructureChat>? _jobWithBdChat;
     private readonly IJobWithBd<PollOptions>? _jobWithBdPollOptions;
     private readonly TelegramBotClient _client;
     private readonly GoogleSheets _sheets;
     private readonly FindingService _findingService;
-    
 
-    public PollService(IJobWithBd<StructureChat>? jobWithBdChat,IJobWithBd<PollOptions>? jobWithBdPollOptions,
-        TelegramBotClient client,GoogleSheets sheets,FindingService findingService)
+
+    public PollService(IJobWithBd<StructureChat>? jobWithBdChat, IJobWithBd<PollOptions>? jobWithBdPollOptions,
+        TelegramBotClient client, GoogleSheets sheets, FindingService findingService)
     {
         _jobWithBdChat = jobWithBdChat;
         _jobWithBdPollOptions = jobWithBdPollOptions;
@@ -26,24 +25,28 @@ public class PollService
         _findingService = findingService;
     }
 
-
-    public async Task AddPoll( Poll poll)
+    /// <summary>
+    /// добавление результатов в голосование
+    /// </summary>
+    /// <param name="poll"></param>
+    public async Task AddPoll(Poll poll)
     {
         try
         {
-            var task= _findingService.SChatFindByPollIdAsync(poll.Id);
+            var task = _findingService.SChatFindByPollIdAsync(poll.Id);
             var listOptionsBd = (await _jobWithBdPollOptions!.GetItemsAsync()).ToList();
 
-            var pollOptions = listOptionsBd.Any() ? 
-                listOptionsBd.Where(pollO => pollO.PollId == poll.Id) : listOptionsBd;
+            var pollOptions = listOptionsBd.Any()
+                ? listOptionsBd.Where(pollO => pollO.PollId == poll.Id)
+                : listOptionsBd;
 
             var listOptions = new List<PollOptions>();
             var chat = await task;
-           // var chat =(await _jobWithBdChat!.GetItemsAsync()).FirstOrDefault(ch => ch.PollId==poll.Id);
+            // var chat =(await _jobWithBdChat!.GetItemsAsync()).FirstOrDefault(ch => ch.PollId==poll.Id);
 
             foreach (var item in poll.Options)
             {
-                listOptions.Add(new ()
+                listOptions.Add(new()
                 {
                     PollId = poll.Id,
                     Name = item.Text,
@@ -51,8 +54,8 @@ public class PollService
                     VoterCount = item.VoterCount
                 });
             }
-        
-        
+
+
             if ((pollOptions) != null)
             {
                 //очистить и перезаписать
@@ -66,41 +69,45 @@ public class PollService
         }
         catch (Exception ex)
         {
-           Console.WriteLine(ex.Message); 
+            Console.WriteLine(ex.Message);
         }
-
     }
 
-
-    public async Task StartPoll(long idChat,DateTime endPollTime)
+    /// <summary>
+    /// запуск голосования
+    /// </summary>
+    /// <param name="idChat"></param>
+    /// <param name="endPollTime"></param>
+    public async Task StartPoll(long idChat, DateTime endPollTime)
     {
-        var chat =await _jobWithBdChat!.FindAsync(idChat);
+        var chat = await _jobWithBdChat!.FindAsync(idChat);
 
-        var googleList = (await _sheets.ListForPoll(chat.GoogleSheetToken!)).Select(x=>x.Name).ToList();
+        var googleList = (await _sheets.ListForPoll(chat.GoogleSheetToken!)).Select(x => x.Name).ToList();
 
         var message = await _client.SendPollAsync(chat.ChatId, "голосование", googleList!,
             allowsMultipleAnswers: true, isAnonymous: false);
-        
+
         if (googleList.Any())
         {
             chat.CreatedRequestPoll = true;
             chat.CreatedPoll = true;
             chat.IdMessageLastPoll = message.MessageId;
             chat.PollId = message.Poll!.Id;
-                    
+
             chat.LastChangeTime = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
             chat.StartedPollForced = true;
             chat.TimeEndForcePoll = DateTime.SpecifyKind(endPollTime, DateTimeKind.Utc);
 
-            await  _jobWithBdChat.Update(chat);
+            await _jobWithBdChat.Update(chat);
         }
-
     }
 
-
+    /// <summary>
+    /// закрытие голосования
+    /// </summary>
+    /// <param name="idChat"></param>
     public async Task EndPoll(long idChat)
     {
-       
         var chat = await _jobWithBdChat!.FindAsync(idChat);
         var task = _findingService.FindPollsByIdAsync(chat.ChatId);
         //закрытие голосование
@@ -114,8 +121,8 @@ public class PollService
         chat.StartedPollForced = false;
         chat.TimeEndForcePoll = DateTime.SpecifyKind(new DateTime(), DateTimeKind.Utc);
         var options = await task;
-        
-       // var options = (await _jobWithBdPollOptions!.GetItemsAsync()).Where(i => i.ChatId == chat.ChatId).ToList();
+
+        // var options = (await _jobWithBdPollOptions!.GetItemsAsync()).Where(i => i.ChatId == chat.ChatId).ToList();
 
         if (options.Count > 0)
         {
@@ -148,5 +155,4 @@ public class PollService
             await _jobWithBdPollOptions!.DeleteRangeAsync(options);
         }
     }
-
 }

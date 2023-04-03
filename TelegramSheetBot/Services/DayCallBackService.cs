@@ -39,7 +39,11 @@ public class DayCallBackService
            disableNotification: true);
 
     }
-
+/// <summary>
+/// дни недели для окончания голосования
+/// </summary>
+/// <param name="client"></param>
+/// <param name="chatId"></param>
     public  async Task DayEndPollInChat(ITelegramBotClient client,long chatId)
     {
         var listOfDayWeek =  new InlineKeyboardMarkup(new []

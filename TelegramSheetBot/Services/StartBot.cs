@@ -50,10 +50,14 @@ public class StartBot
 
 
 
-
+/// <summary>
+/// получение сообщения
+/// </summary>
+/// <param name="client"></param>
+/// <param name="update"></param>
+/// <param name="token"></param>
     private async Task FuncUpdate(ITelegramBotClient client, Update update, CancellationToken token)
     {
-       
         //логи при добавлении в чат и удалении
         if (update.Type == UpdateType.MyChatMember)
         {
@@ -118,6 +122,12 @@ public class StartBot
             // return;
         }
 
+        if (update.Type == UpdateType.PollAnswer)
+        {
+            var pollAnswer = update.PollAnswer;
+            Console.WriteLine($"Проголосовал :{pollAnswer!.User.FirstName} ({pollAnswer.User.Id})");
+        }
+
 
         if(update.Type==UpdateType.Message)
         {
@@ -177,6 +187,13 @@ public class StartBot
         }
     }
 
+/// <summary>
+/// получение ошибок
+/// </summary>
+/// <param name="clent"></param>
+/// <param name="exception"></param>
+/// <param name="token"></param>
+/// <returns></returns>
     private Task FuncError(ITelegramBotClient clent, Exception exception, CancellationToken token)
     {
         var error = exception switch

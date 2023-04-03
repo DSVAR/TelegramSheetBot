@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 using Quartz.Impl;
 using Telegram.Bot;
+using TelegramSheetBot.Entity;
 using TelegramSheetBot.Interfaces;
 using TelegramSheetBot.Services;
 using TelegramSheetBot.Services.Callbacks;
@@ -79,6 +80,7 @@ namespace TelegramSheetBot
                 .AddSingleton<ISchedulerFactory, StdSchedulerFactory>()
                 .AddSingleton<DayCallBackService>()
                 .AddTransient<PollService>()
+                .AddTransient<SettingQuartzService>()
                 .AddTransient<FindingService>()
                 .AddQuartz(q => { q.UseMicrosoftDependencyInjectionJobFactory(); })
                 .AddQuartzHostedService(options => { options.WaitForJobsToComplete = true; });
@@ -91,7 +93,7 @@ namespace TelegramSheetBot
         async Task AsyncMain()
         {
             Console.WriteLine("1");
-            await _service!.GetService<TestService>()!.Quartz();
+            await _service!.GetService<SettingQuartzService>()!.Quartz();
             await _service!.GetService<StartBot>()!.Init();
 
             Console.ReadKey();

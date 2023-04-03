@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TelegramSheetBot.Models;
 
-namespace TelegramSheetBot.Services;
+namespace TelegramSheetBot.Entity;
 
 public class ApplicationContext : DbContext
 {

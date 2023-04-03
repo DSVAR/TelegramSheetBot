@@ -146,7 +146,11 @@ public class SettingChat
         return false;
     }
 
-
+/// <summary>
+/// проверка на существования чата в таблице
+/// </summary>
+/// <param name="id"></param>
+/// <returns></returns>
     public async Task<bool> Exist(long id)
     {
         try
@@ -168,6 +172,11 @@ public class SettingChat
         }
     }
 
+/// <summary>
+/// настройка чата
+/// </summary>
+/// <param name="client"></param>
+/// <param name="chatId"></param>
     public async Task Settings(ITelegramBotClient client,long chatId)
     {
         var item = await _jobWithBdChat.FindAsync(chatId);
@@ -199,7 +208,10 @@ public class SettingChat
         }
     }
 
-
+/// <summary>
+/// обновление
+/// </summary>
+/// <param name="chatId"></param>
     public async Task CheckUpdate(long chatId)
     {
         var chat = await _jobWithBdChat.FindAsync(chatId);

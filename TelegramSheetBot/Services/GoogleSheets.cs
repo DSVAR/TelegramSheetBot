@@ -62,11 +62,11 @@ public class GoogleSheets
     //     }
     // }
 
-/// <summary>
-/// получение заголовка в экселе
-/// </summary>
-/// <param name="spreadsheetId"></param>
-/// <returns></returns>
+    /// <summary>
+    /// получение заголовка в экселе
+    /// </summary>
+    /// <param name="spreadsheetId"></param>
+    /// <returns></returns>
     private async Task<List<SheetRow>> GetHeader(string spreadsheetId)
     {
         try
@@ -103,11 +103,11 @@ public class GoogleSheets
         }
     }
 
-/// <summary>
-/// тестирования подключения
-/// </summary>
-/// <param name="spreadId"></param>
-/// <returns></returns>
+    /// <summary>
+    /// тестирования подключения
+    /// </summary>
+    /// <param name="spreadId"></param>
+    /// <returns></returns>
     public async Task<bool> TestConnection(string spreadId)
     {
         try
@@ -121,12 +121,12 @@ public class GoogleSheets
             return false;
         }
     }
-/// <summary>
-/// получение объектов для голосования 
-/// </summary>
-/// <param name="spreadsheetId"></param>
-/// <returns></returns>
 
+    /// <summary>
+    /// получение объектов для голосования 
+    /// </summary>
+    /// <param name="spreadsheetId"></param>
+    /// <returns></returns>
     public async Task<List<SheetRow>> ListForPoll(string spreadsheetId)
     {
         var header = await GetHeader(spreadsheetId);
@@ -155,11 +155,11 @@ public class GoogleSheets
         return pollList;
     }
 
-/// <summary>
-/// система бана объектов 
-/// </summary>
-/// <param name="spreadsheetId"></param>
-/// <param name="name"></param>
+    /// <summary>
+    /// система бана объектов 
+    /// </summary>
+    /// <param name="spreadsheetId"></param>
+    /// <param name="name"></param>
     public async Task BanSystem(string spreadsheetId, string name)
     {
         try
@@ -172,7 +172,7 @@ public class GoogleSheets
 
 
             var listCell = sheet.First().Data[0].RowData[0].Values;
-            
+
             foreach (var row in listCell.Select((item, i) => (item, index: i)))
             {
                 if (!string.IsNullOrEmpty(row.item.FormattedValue))
@@ -181,7 +181,7 @@ public class GoogleSheets
                     var blue = float.Parse((color!.Blue == null ? "0" : color.Blue!.ToString())!);
                     var red = float.Parse((color.Red == null ? "0" : color.Red!.ToString())!);
                     var green = float.Parse((color.Green == null ? "0" : color.Green!.ToString())!);
-                    
+
                     //изменения с красного цвета в оранжевый
                     if (blue == 0f && green == 0f && red >= 1f)
                     {
@@ -197,6 +197,7 @@ public class GoogleSheets
 
                         await UpdateCellFormat(cellFormat, row.index, spreadsheet.SpreadsheetId);
                     }
+
                     //из оранжевого в зеленный
                     if (blue == 0f && green >= 0.6f && red >= 1f)
                     {
@@ -210,6 +211,7 @@ public class GoogleSheets
 
                         await UpdateCellFormat(cellFormat, row.index, spreadsheet.SpreadsheetId);
                     }
+
                     //из светло-синего в зеленый
                     if (blue >= 0.9f && green >= 0.8f && red >= 0.7f)
                     {
@@ -225,6 +227,7 @@ public class GoogleSheets
                     }
                 }
             }
+
             foreach (var columnBan in listCell.Select((item, i) => (item, index: i)))
             {
                 //ban
@@ -248,12 +251,12 @@ public class GoogleSheets
         }
     }
 
-/// <summary>
-/// обновление колонки
-/// </summary>
-/// <param name="cellFormat"></param>
-/// <param name="columnIndex"></param>
-/// <param name="spreadsheetId"></param>
+    /// <summary>
+    /// обновление колонки
+    /// </summary>
+    /// <param name="cellFormat"></param>
+    /// <param name="columnIndex"></param>
+    /// <param name="spreadsheetId"></param>
     private async Task UpdateCellFormat(CellFormat cellFormat, int columnIndex, string spreadsheetId)
     {
         CellData GetFormatted() => new CellData { UserEnteredFormat = cellFormat };
