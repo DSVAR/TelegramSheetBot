@@ -221,7 +221,6 @@ public class SettingChat
             var fullChat = await _client.GetChatAsync(chatId);
             chat.NameChat = fullChat.Title;
             await _jobWithBdChat.Update(chat);
-            var v = 5;
         }
     }
 }

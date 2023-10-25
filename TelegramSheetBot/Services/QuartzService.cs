@@ -64,30 +64,39 @@ public class QuartzService : IJob
             //проверяем если с последнего опроса прошло больше 6 дней то обнуляем значения времени 
             if ((DateTime.Now - item.LastChangeTime).Days >= 6)
             {
-                bool cycle = true;
-
-                item.CreatedPollThisWeek = false;
-                item.TimeStartPoll = "";
-                item.TimeEndPoll = "";
-
-
-                while (cycle)
+                if (item.UsualTime)
                 {
-                    if (string.IsNullOrEmpty(item.TimeStartPoll))
+                    item.TimeStartPoll = "8:00";
+                    item.TimeEndPoll = "17:00";
+                    item.CreatedPollThisWeek = false;
+                }
+                else
+                {
+                    bool cycle = true;
+
+                    item.CreatedPollThisWeek = false;
+                    item.TimeStartPoll = "";
+                    item.TimeEndPoll = "";
+
+
+                    while (cycle)
                     {
-                        item = RandomTime(item);
-                    }
-                    else
-                    {
-                        if (TimeSpan.Parse(item.TimeStartPoll!) >= TimeSpan.Parse(item.TimeEndPoll!) &&
-                            TimeSpan.Parse(item.TimeIntervalEnd!) <= TimeSpan.Parse(item.TimeEndPoll!)
-                            && TimeSpan.Parse(item.TimeStartPoll) > TimeSpan.Parse(item.TimeEndPoll!))
+                        if (string.IsNullOrEmpty(item.TimeStartPoll))
                         {
                             item = RandomTime(item);
                         }
                         else
                         {
-                            cycle = false;
+                            if (TimeSpan.Parse(item.TimeStartPoll!) >= TimeSpan.Parse(item.TimeEndPoll!) &&
+                                TimeSpan.Parse(item.TimeIntervalEnd!) <= TimeSpan.Parse(item.TimeEndPoll!)
+                                && TimeSpan.Parse(item.TimeStartPoll) > TimeSpan.Parse(item.TimeEndPoll!))
+                            {
+                                item = RandomTime(item);
+                            }
+                            else
+                            {
+                                cycle = false;
+                            }
                         }
                     }
                 }
@@ -109,66 +118,28 @@ public class QuartzService : IJob
     {
         try
         {
-            var today = DateTime.Now;
-
-            today = today.AddHours(-today.Hour);
-            today = today.AddMinutes(-today.Minute);
-            today = today.AddSeconds(-today.Second);
-
-            DateTime timeStart = default;
-            DateTime timeEnd = default;
-
-            if (!string.IsNullOrEmpty(item.TimeStartPoll) && !string.IsNullOrEmpty(item.TimeEndPoll))
+            if (!item.CreatedPollThisWeek)
             {
-                timeStart = today + TimeSpan.Parse(item.TimeStartPoll!);
-                timeEnd = today + TimeSpan.Parse(item.TimeEndPoll!);
-            }
-
-            if (today.DayOfWeek.ToString() == item.DayOfWeekStartPoll)
-            {
-                if (DateTime.Now > timeStart && !item.CreatedRequestPoll && timeStart.Ticks != 0 &&
-                    !item.CreatedPollThisWeek)
+                if (item.UsualTime )
                 {
-                    item.CreatedRequestPoll = true;
-
-
-                    var googleList = (await _sheets.ListForPoll(item.GoogleSheetToken!)).Select(x => x.Name);
-
-                    var message = await _client.SendPollAsync(item.ChatId, "голосование", googleList!,
-                        allowsMultipleAnswers: true, isAnonymous: false);
-
-                    item.CreatedPoll = true;
-                    item.IdMessageLastPoll = message.MessageId;
-                    item.PollId = message.Poll!.Id;
-
-
-                    var hourEnd = int.Parse(item.TimeIntervalEnd!.Remove(item.TimeIntervalEnd!.IndexOf(':')));
-                    int minuteEnd = int.Parse(item.TimeIntervalEnd!.Substring(item.TimeIntervalEnd.IndexOf(':') + 1));
-                    today = today.AddHours(hourEnd);
-                    today = today.AddMinutes(minuteEnd);
-                    if (DateTime.Now > today)
+                    var today = DateTime.Now;
+                    if (item.UsualDayStart == today.DayOfWeek.ToString() && today>DateTime.Parse(item.TimeStartPoll!) && !item.CreatedPoll)
                     {
-                        var now = DateTime.Now;
-                        now = now.AddHours(1);
-
-                        item.TimeEndPoll = now.Hour + ":" + now.Minute;
+                        await _pollService.StartPoll(item.ChatId,DateTime.Parse(item!.TimeEndPoll!)  , false);
                     }
-
-                    item.StartedPollForced = false;
-                    await _jobWithBdStructureChat.Update(item);
-                    return;
+                
+                }
+                else
+                {
+                    if (DateTime.Now.DayOfWeek.ToString() == item.DayOfWeekStartPoll && DateTime.Now>DateTime.Parse(item.TimeStartPoll!)&& !item.CreatedPoll)
+                    {
+                        await _pollService.StartPoll(item.ChatId,DateTime.Parse(item!.TimeEndPoll!)  , false);
+                    }
                 }
             }
+           
 
-
-            //закрытие голосование стандарный/вызванный насильно
-            if ((today.DayOfWeek.ToString() == item.DayOfWeekEndPoll && DateTime.Now > timeEnd &&
-                 item is { CreatedRequestPoll: true, CreatedPoll: true, StartedPollForced: false })
-                || (item.StartedPollForced && DateTime.Now > item.TimeEndForcePoll &&
-                    item.TimeEndForcePoll != new DateTime()))
-            {
-                await _pollService.EndPoll(item.ChatId);
-            }
+            await  ClosePoll(item);
         }
         catch (Exception e)
         {
@@ -217,6 +188,57 @@ public class QuartzService : IJob
         {
             Console.WriteLine(e.Message);
             throw;
+        }
+    }
+
+/// <summary>
+/// старт голосования
+/// </summary>
+/// <param name="item"></param>
+async Task CreatePoll(StructureChat item, string? today)
+{
+    if (today == item.DayOfWeekStartPoll)
+    {
+        item.CreatedRequestPoll = true;
+
+
+        var googleList = (await _sheets.ListForPoll(item.GoogleSheetToken!)).Select(x => x.Name);
+
+        var message = await _client.SendPollAsync(item.ChatId, "голосование", googleList!,
+            allowsMultipleAnswers: true, isAnonymous: false);
+
+        item.CreatedPoll = true;
+        item.IdMessageLastPoll = message.MessageId;
+        item.PollId = message.Poll!.Id;
+        item.StartedPollForced = false;
+
+        await _jobWithBdStructureChat.Update(item);
+    }
+}
+
+    async Task ClosePoll(StructureChat item)
+    {
+        var today = DateTime.Now;
+
+        today = today.AddHours(-today.Hour);
+        today = today.AddMinutes(-today.Minute);
+        today = today.AddSeconds(-today.Second);
+        
+        DateTime timeEnd = default;
+
+        if (!string.IsNullOrEmpty(item.TimeStartPoll) && !string.IsNullOrEmpty(item.TimeEndPoll))
+        {
+            timeEnd = today + TimeSpan.Parse(item.TimeEndPoll!);
+        }
+        
+        //закрытие голосование стандарный/вызванный насильно
+        if ((today.DayOfWeek.ToString() == item.DayOfWeekEndPoll && DateTime.Now > timeEnd &&
+             item is { CreatedRequestPoll: true, CreatedPoll: true, StartedPollForced: false })
+            || (item.StartedPollForced && DateTime.Now > item.TimeEndForcePoll &&
+                item.TimeEndForcePoll != new DateTime())
+            || DateTime.Now > timeEnd && item.UsualTime && item.UsualDayStart==today.DayOfWeek.ToString() && item is{ CreatedPoll:true})
+        {
+            await _pollService.EndPoll(item.ChatId);
         }
     }
 }

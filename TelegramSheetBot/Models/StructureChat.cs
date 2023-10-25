@@ -23,6 +23,9 @@ public class StructureChat
     public bool CanStartPoll { get; set; }
     public int IdMessageLastPoll { get; set; }
     
+    public bool UsualTime { get; set; }
+    public string? UsualDayStart { get; set; }
+    
     public string? PollId { get; set; }
     public bool StartedPollForced { get; set; }
     public DateTime TimeEndForcePoll { get; set; }

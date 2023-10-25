@@ -66,7 +66,7 @@ namespace TelegramSheetBot
             var collection = new ServiceCollection()
                 .AddDbContext<ApplicationContext>(ServiceLifetime.Transient)
                 .AddScoped(_ => { return new TelegramBotClient(token!); })
-                
+                .AddTransient<ApplicationContext>()
                // .AddTransient(typeof(JobWithBd<>))
                 .AddTransient(typeof(IJobWithBd<>),typeof(JobWithBd<>))
                 .AddSingleton(new SheetsService(init))
@@ -84,15 +84,13 @@ namespace TelegramSheetBot
                 .AddTransient<FindingService>()
                 .AddQuartz(q => { q.UseMicrosoftDependencyInjectionJobFactory(); })
                 .AddQuartzHostedService(options => { options.WaitForJobsToComplete = true; });
-
-            ;
+            
             return collection.BuildServiceProvider();
         }
 
 
         async Task AsyncMain()
         {
-            Console.WriteLine("1");
             await _service!.GetService<SettingQuartzService>()!.Quartz();
             await _service!.GetService<StartBot>()!.Init();
 

@@ -11,24 +11,17 @@ public class ApplicationContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        // builder.Entity<ShortPoll>()
-        //     .HasOne(s => s.StructureChat)
-        //     .WithOne(s=>s.Polls)
-        //     .HasForeignKey<ShortPoll>(shortPoll=>shortPoll.ChatId)
-        //     .OnDelete(DeleteBehavior.Cascade);
         
         builder.Entity<PollOptions>()
             .HasOne(s => s.Chat)
             .WithMany(s => s.Options)
-            .OnDelete(DeleteBehavior.Cascade);
-
-  
+            .OnDelete(DeleteBehavior.Cascade);  
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
+        //options.UseNpgsql("Server=localhost;User Id=postgres;Password=125348220;Port=5432;Database=Test_TG;"); 
         options.UseNpgsql("Server=localhost;User Id=postgres;Password=125348220;Port=5432;Database=TGBot_Test;");
-        // options.UseNpgsql("Server=localhost;User Id=postgres;Password=125348220;Port=5432;Database=TelegramBot;");
         
     }
 }

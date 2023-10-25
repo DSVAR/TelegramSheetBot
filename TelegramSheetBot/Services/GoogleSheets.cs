@@ -144,11 +144,12 @@ public class GoogleSheets
             }
 
             var rnd = new Random();
-            int count = 10 - pollList.Count();
+            int count = 9 - pollList.Count();
 
             var list = header.OrderBy(_ => rnd.Next()).Take(count).ToList();
 
             pollList.AddRange(list);
+            pollList.Add(new SheetRow{Name = "Не еду"});
         }
 
 

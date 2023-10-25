@@ -162,6 +162,8 @@ public class CommandsHandler
                 await client.SendTextMessageAsync(chatId, "настройка окончена", disableNotification: true);
             }
         }
+
+     
     }
 
     /// <summary>
@@ -226,10 +228,38 @@ public class CommandsHandler
                 await _manageGroup.GetTimeEndPoll(chatId);
                 break;
             }
+            case { } a when a.Contains("/EndPoll"):
+            {
+                await _manageGroup.ForceEndPoll(chatId);
+                break;
+            }  
+            case { } a when a.Contains("/TypeBot"):
+            {
+                await _manageGroup.TypeBot( chatId);
+                break;
+            }
+            case { } a when a.Contains("/IsOne"):
+            {
+                await _manageGroup.IsOneDayMethod(chatId);
+                break;
+            }
+            case { } a when a.Contains("/ChangeOneDay_"):
+            {
+                var day = a.Replace("/ChangeOneDay_", "");
+                if (day.Contains(GlobalValues.SmileStar)) day = day.Remove(0);
+                
+                await _manageGroup.ChangeOneDay(chatId,day);
+                break;
+            }
+            case { } a when a.Contains("/Period"):
+            {
+                
+                await _manageGroup.Period(chatId);
+                break;
+            }
             case { } a when a.Contains("/Test"):
             {
                 throw new Exception("gay");
-                break;
             }
         }
     }

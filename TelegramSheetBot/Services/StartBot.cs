@@ -107,10 +107,7 @@ public class StartBot
                     await _handler.AdminsCallback(callback.Data!, id);
                 }
             }
-            
-            
-
-            // return;
+            return;
         }
 
 
@@ -138,23 +135,7 @@ public class StartBot
             if (chat.Type == ChatType.Group || chat.Type == ChatType.Supergroup)
             {
                 Console.WriteLine($"От кого:{message!.From} {message.Text}");
-                if (message.Type == MessageType.ChatMemberLeft)
-                {
-                    return;
-                }
-
-                if (message.Type == MessageType.ChatMembersAdded)
-                {
-                    if (!await _settingChat.Exist(message.Chat.Id))
-                    { //добавление чат
-                        await _dayCallBackService.DayStartPollInChat(client, update.MyChatMember!.Chat.Id);
-                    }
-               
-                    // return;
-                }
-        
-            
-
+           
                 if (string.IsNullOrEmpty(message.Text!))
                     return;
 
@@ -200,7 +181,7 @@ public class StartBot
         {
             ApiRequestException apiRequestException=>
                 $"ошибка по API :\n {apiRequestException.ErrorCode } \n {apiRequestException.Message}",
-            _ =>exception.Message
+            _ =>exception.Message 
             
         };
         Console.WriteLine($"{error}");

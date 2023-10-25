@@ -35,24 +35,28 @@ public class PollService
         {
             var task = _findingService.SChatFindByPollIdAsync(poll.Id);
             var listOptionsBd = (await _jobWithBdPollOptions!.GetItemsAsync()).ToList();
-
+            var chat = await task;
             var pollOptions = listOptionsBd.Any()
-                ? listOptionsBd.Where(pollO => pollO.PollId == poll.Id)
+                ? listOptionsBd.Where(pollO => pollO.ChatId == chat!.ChatId)
                 : listOptionsBd;
 
             var listOptions = new List<PollOptions>();
-            var chat = await task;
+           
             // var chat =(await _jobWithBdChat!.GetItemsAsync()).FirstOrDefault(ch => ch.PollId==poll.Id);
 
             foreach (var item in poll.Options)
             {
-                listOptions.Add(new()
+                if (item.Text != "Не еду")
                 {
-                    PollId = poll.Id,
-                    Name = item.Text,
-                    ChatId = chat!.ChatId,
-                    VoterCount = item.VoterCount
-                });
+                    listOptions.Add(new()
+                    {
+                        PollId = poll.Id,
+                        Name = item.Text,
+                        ChatId = chat!.ChatId,
+                        VoterCount = item.VoterCount
+                    }); 
+                }
+                
             }
 
 
@@ -69,7 +73,7 @@ public class PollService
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            Console.WriteLine(ex.Message+"addPoll PollService");
         }
     }
 
@@ -78,7 +82,7 @@ public class PollService
     /// </summary>
     /// <param name="idChat"></param>
     /// <param name="endPollTime"></param>
-    public async Task StartPoll(long idChat, DateTime endPollTime)
+    public async Task StartPoll(long idChat, DateTime endPollTime,bool startedForce)
     {
         var chat = await _jobWithBdChat!.FindAsync(idChat);
 
@@ -95,7 +99,7 @@ public class PollService
             chat.PollId = message.Poll!.Id;
 
             chat.LastChangeTime = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
-            chat.StartedPollForced = true;
+            chat.StartedPollForced = startedForce;
             chat.TimeEndForcePoll = DateTime.SpecifyKind(endPollTime, DateTimeKind.Utc);
 
             await _jobWithBdChat.Update(chat);
@@ -129,8 +133,8 @@ public class PollService
             var max = options.Max(i => i.VoterCount);
             var listMax = (options.Where(i => i.VoterCount == max)).ToList();
 
-            var rnd = new Random();
-            string name = "";
+            var rnd = new Random(Guid.NewGuid().GetHashCode());
+            string name  = "";
 
             if (listMax.Count() > 1)
             {

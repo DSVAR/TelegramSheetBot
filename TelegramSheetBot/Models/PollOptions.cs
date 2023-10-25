@@ -14,4 +14,4 @@ public class PollOptions
     [ForeignKey("ChatId")]
     public long ChatId { get; set; }
     public virtual StructureChat? Chat { get; set; } 
-}
+} 

@@ -72,7 +72,8 @@ public class JobWithBd<T> : IJobWithBd<T> where T : class
     {
         try
         {
-            _dbSet.RemoveRange(list);
+            _dbSet.RemoveRange(list.ToList());
+            // _dbSet.RemoveRange(list);
             await Application.SaveChangesAsync();
         }
         catch (Exception e)

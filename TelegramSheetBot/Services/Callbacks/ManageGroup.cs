@@ -61,9 +61,7 @@ public class ManageGroup
     public async Task SettingChat(long tgChatId, long chatManageId)
     {
         var chatManage = await _findingService.MChatFindByIdAsync(chatManageId);
-        //  var chatManage = (await _jobWithBdManageChat.GetItemsAsync()).First(cm => cm.ChatId == chatManageId);
         var chat = await _findingService.SChatFindByChatIdAsync(tgChatId);
-        // var chat =  (await _jobWithBdChat.GetItemsAsync()).FirstOrDefault(c=>c.ChatId==chatManage!.SelectedChat);
 
         chatManage!.SelectedChat = tgChatId;
         await _jobWithBdManageChat.Update(chatManage);
@@ -90,7 +88,15 @@ public class ManageGroup
             },
             new[]
             {
+                InlineKeyboardButton.WithCallbackData("Закрыть голосование", $"/EndPoll")
+            },
+            new[]
+            {
                 InlineKeyboardButton.WithCallbackData("Время конца голосования", $"/TimeEnd")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("Настройка типа голосования", $"/TypeBot")
             },
             new[]
             {
@@ -161,20 +167,30 @@ public class ManageGroup
     /// </summary>
     /// <param name="chatId"></param>
     /// <param name="week"></param>
-    public async Task ForceStartPoll(long chatId, string week)
+    public async Task ForceStartPoll(long chatId, string dayOfEnd)
     {
+        
         var manageChat = await _findingService.MChatFindByIdAsync(chatId);
         // var manageChat = (await _jobWithBdManageChat.GetItemsAsync()).FirstOrDefault(ch => ch.ChatId == chatId);
 
         var chat = await _jobWithBdChat.FindAsync(manageChat!.SelectedChat);
 
         var dayToday = DateTime.Now.DayOfWeek;
-        var das = Enum.Parse<DayOfWeek>($"{week}");
-        var countDay = das - dayToday;
+        var endDay = Enum.Parse<DayOfWeek>($"{dayOfEnd}");
+        var countDay=0;
+        if (dayOfEnd == "Sunday")
+        {
+            var t = (int)dayToday;
+            countDay = 7 - t;
+        }
+        else
+        {
+            countDay=endDay - dayToday;
+        }
         if (countDay >= 0)
         {
             var nextDay = DateTime.Now.AddDays(countDay).AddMinutes(2);
-            await _pollService.StartPoll(chat.ChatId, nextDay);
+            await _pollService.StartPoll(chat.ChatId, nextDay,true);
         }
     }
 
@@ -232,5 +248,130 @@ public class ManageGroup
 
         var timeStart = chat.DayOfWeekEndPoll + " " + chat.TimeEndPoll;
         await _client.SendTextMessageAsync(id, $"дни {timeStart}");
+    }
+
+    /// <summary>
+    /// Закрытие голосования
+    /// </summary>
+    /// <param name="id"></param>
+    public async Task ForceEndPoll(long id)
+    {
+        var manageChat = (await _jobWithBdManageChat.GetItemsAsync()).FirstOrDefault(ch => ch.ChatId == id);
+        var chat = await _jobWithBdChat.FindAsync(manageChat!.SelectedChat);
+        await _client.StopPollAsync(chat.ChatId, chat.IdMessageLastPoll);
+
+        chat.CreatedPoll = false;
+        chat.CreatedRequestPoll = false;
+        chat.CreatedPollThisWeek = true;
+        chat.LastChangeTime = chat.LastChangeTime.AddDays(3);
+        await  _jobWithBdChat.Update(chat);
+       
+        await _client.SendTextMessageAsync(chat.ChatId, $"Голосования закрыто");
+    } 
+ 
+    
+    public async Task TypeBot(long id)
+    {
+        var manageChat = (await _jobWithBdManageChat.GetItemsAsync()).FirstOrDefault(ch => ch.ChatId == id);
+        var chat = await _jobWithBdChat.FindAsync(manageChat!.SelectedChat);
+        
+        string? isOne = null;
+        string? isPeriod=null;
+        
+        
+        if (chat.UsualTime)
+        {
+            isOne = GlobalValues.SmileStar;
+        }
+        else
+        {
+            isPeriod = GlobalValues.SmileStar;
+        }
+        
+        var keyboard = new InlineKeyboardMarkup(new[]
+        {
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData($"{isOne}выбранный один день", $"/IsOne"),
+                InlineKeyboardButton.WithCallbackData($"{isPeriod}период", $"/Period")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("Назад", $"/Back")
+            }
+        });
+        
+        
+        await _client.EditMessageTextAsync(id, manageChat!.LastMessage, $"{chat!.NameChat}",
+            replyMarkup: keyboard);
+    }
+    public async Task IsOneDayMethod(long id)
+    {
+        var manageChat = (await _jobWithBdManageChat.GetItemsAsync()).FirstOrDefault(ch => ch.ChatId == id);
+        var chat =await _jobWithBdChat.FindAsync(manageChat!.SelectedChat);
+        
+        List<DayOfWeek> listOfDays=new ()
+        {
+            DayOfWeek.Sunday,
+            DayOfWeek.Monday,
+            DayOfWeek.Tuesday,
+            DayOfWeek.Wednesday,
+            DayOfWeek.Thursday,
+            DayOfWeek.Friday,
+            DayOfWeek.Saturday
+        };
+        List<InlineKeyboardButton[]> correctList = new List<InlineKeyboardButton[]>();
+        List<string> daysStrings = new List<string>();
+  
+        foreach (var day in listOfDays)
+        {
+            if (day.ToString() == chat.UsualDayStart)
+            {
+                daysStrings.Add(GlobalValues.SmileStar+day);
+            }
+            else
+            {
+                daysStrings.Add(day.ToString());
+            }
+        }
+        
+        if (listOfDays.Count > 0)
+        {
+            correctList =daysStrings.Chunk(2).Select(x => x.Select(y =>
+                InlineKeyboardButton.WithCallbackData(y.ToString(), $"/ChangeOneDay_{y}")).ToArray()).ToList();
+            
+            correctList.Add(new[] { InlineKeyboardButton.WithCallbackData("Назад", "/TypeBot") });
+        }
+
+       
+        await _client.EditMessageTextAsync(id, manageChat!.LastMessage, "Выбери день старта и окончания голосования",
+            replyMarkup: new InlineKeyboardMarkup(correctList));
+    }
+
+    public async Task ChangeOneDay(long id,string? day)
+    {
+      
+        var manageChat = (await _jobWithBdManageChat.GetItemsAsync()).FirstOrDefault(ch => ch.ChatId == id);
+        var chat =await _jobWithBdChat.FindAsync(manageChat!.SelectedChat);
+
+        chat.UsualDayStart = day;
+        chat.UsualTime = true;
+        
+        await _jobWithBdChat.Update(chat);
+
+        await IsOneDayMethod(id);
+
+    }
+
+    public async Task Period(long id)
+    {
+        var manageChat = (await _jobWithBdManageChat.GetItemsAsync()).FirstOrDefault(ch => ch.ChatId == id);
+        var chat =await _jobWithBdChat.FindAsync(manageChat!.SelectedChat);
+
+        chat.UsualDayStart = "";
+        chat.UsualTime = false;
+        
+        await _jobWithBdChat.Update(chat);
+        await TypeBot(id);
     }
 }

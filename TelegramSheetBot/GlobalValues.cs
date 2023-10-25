@@ -9,7 +9,6 @@ public class GlobalValues
    public static readonly string ChatEnvironmentParent = $"{Directory.GetParent(Environment.CurrentDirectory)!.Parent!.Parent!.FullName}";
    
    
-   
    public static readonly string SmileNumberZero=char.ConvertFromUtf32(0x0030) +char.ConvertFromUtf32(0xFE0F)+char.ConvertFromUtf32(0x20E3);
    public static readonly string SmileNumberFirst=char.ConvertFromUtf32(0x0031) +char.ConvertFromUtf32(0xFE0F)+char.ConvertFromUtf32(0x20E3);
    public static readonly string SmileNumberSecond=char.ConvertFromUtf32(0x0032) +char.ConvertFromUtf32(0xFE0F)+char.ConvertFromUtf32(0x20E3);
